@@ -113,3 +113,17 @@ class Blockchain:
                 "hash": block.hash
             })
         return json_chain
+
+#Create blocks and mine them
+
+"""
+block1 = Block("0", time.time(), "Transaction data", 0)
+block1.mine_block(2)
+print(block1)
+
+# Create another block instance with the previous hash set to the hash of the previous block
+
+block2 = Block(block1.hash, time.time(), "More transactions", 0)
+block2.mine_block(3)
+print(block2)
+"""
