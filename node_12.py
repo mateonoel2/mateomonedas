@@ -44,7 +44,7 @@ def consensus():
     longest_chain = None
     current_length = len(blockchain)
 
-    other_nodes = ['localhost:5010', 'localhost:5011']
+    other_nodes = ['localhost:5011', 'localhost:5010']
     
     # Iterate through other nodes in the network
     for node in other_nodes:
@@ -52,9 +52,19 @@ def consensus():
         response = requests.get(f'http://{node}/blocks')
         if response.status_code == 200:
             # Extract the blockchain from the response
-            node_chain = response.json()
+            node_chain_json = response.json()
 
-            # Get the length of the node's blockchain
+            node_chain = []
+            for block_data in node_chain_json:
+                block = Block(
+                    block_data['previous_hash'],
+                    block_data['timestamp'],
+                    block_data['transactions'],
+                    block_data['nonce']
+                )
+                block.hash = block_data['hash']
+                node_chain.append(block)
+                
             node_length = len(node_chain)
 
             # Check if the node's blockchain is longer and valid

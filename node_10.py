@@ -52,11 +52,22 @@ def consensus():
         response = requests.get(f'http://{node}/blocks')
         if response.status_code == 200:
             # Extract the blockchain from the response
-            node_chain = response.json()
+            node_chain_json = response.json()
 
-            # Get the length of the node's blockchain
+            node_chain = []
+            for block_data in node_chain_json:
+                block = Block(
+                    block_data['previous_hash'],
+                    block_data['timestamp'],
+                    block_data['transactions'],
+                    block_data['nonce']
+                )
+                block.hash = block_data['hash']
+                node_chain.append(block)
+                
             node_length = len(node_chain)
-
+            print(node_length)
+            
             # Check if the node's blockchain is longer and valid
             if node_length > current_length and blockchain.is_valid_chain(node_chain):
                 current_length = node_length
