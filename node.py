@@ -5,6 +5,7 @@ from block import Block, Blockchain
 app = Flask(__name__)
 
 blockchain = Blockchain()
+known_nodes = []
 
 @app.route('/blocks', methods=['GET', 'POST'])
 def blocks_route():
@@ -44,7 +45,7 @@ def consensus():
     longest_chain = None
     current_length = len(blockchain)
 
-    other_nodes = ['localhost:5011', 'localhost:5012']
+    other_nodes = known_nodes
     
     # Iterate through other nodes in the network
     for node in other_nodes:
@@ -67,7 +68,7 @@ def consensus():
                 
             node_length = len(node_chain)
             print(node_length)
-            
+
             # Check if the node's blockchain is longer and valid
             if node_length > current_length and blockchain.is_valid_chain(node_chain):
                 current_length = node_length
@@ -82,6 +83,15 @@ def consensus():
 
     return jsonify(response), 200
 
+@app.route('/register', methods=['POST'])
+def register_node():
+    node_address = request.get_json()['node_address']
+
+    if node_address not in known_nodes:
+        known_nodes.append(node_address)
+    
+    response = {'message': 'Node registered successfully'}
+    return jsonify(response), 201
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5010)
