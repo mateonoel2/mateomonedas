@@ -1,18 +1,63 @@
 import hashlib
 import time
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
 
 class Transaction:
-    def __init__(self, sender, recipient, amount):
+    def __init__(self, sender, recipient, amount, private_key=None):
         self.sender = sender
         self.recipient = recipient
         self.amount = amount
+        self.private_key = private_key
+        self.signature = None
+    
+    def sign(self):
+        if self.private_key is None:
+            raise ValueError("Private key is not set.")
+        
+        transaction_data = self.sender + self.recipient + str(self.amount)
+        hash_obj = hashlib.sha256(transaction_data.encode()).digest()
+        signature = self.private_key.sign(
+            hash_obj,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        self.signature = signature
+    
+    def verify_signature(self):
+        if self.signature is None:
+            raise ValueError("Signature is not set.")
+        
+        transaction_data = self.sender + self.recipient + str(self.amount)
+        hash_obj = hashlib.sha256(transaction_data.encode()).digest()
+        try:
+            self.sender.verify(
+                self.signature,
+                hash_obj,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            return True
+        except Exception:
+            return False
 
     def to_dict(self):
         # Convert the transaction to a dictionary representation
         return {
-            "sender": self.sender,
+            "sender": self.sender.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode(),
             "recipient": self.recipient,
-            "amount": self.amount
+            "amount": self.amount,
+            "signature": self.signature.hex() if self.signature else None
         }
 
 class Block:
@@ -45,6 +90,7 @@ class Blockchain:
         self.chain = [self.create_genesis_block()]
         self.difficulty = 4  # Set the mining difficulty
         self.pending_transactions = []
+        self.users = {} 
     
     def __len__(self):
         # Return the length of the chain
@@ -53,6 +99,20 @@ class Blockchain:
     def create_genesis_block(self):
         # Create the genesis block manually or based on your requirements
         return Block("0", "01/01/2022", "Genesis Block", 0)
+    
+
+    def generate_key_pair(self):
+        # Generate a new RSA key pair for a user
+        key_pair = rsa.generate(2048)
+        public_key = key_pair.public_key()
+        private_key = key_pair.export_key()
+        return public_key, private_key
+    
+    def add_user(self):
+        # Add a new user to the blockchain with a generated key pair
+        public_key, private_key = self.generate_key_pair()
+        self.users[public_key] = private_key
+        return public_key
 
     def get_last_block(self):
         # Return the last block in the chain
@@ -88,9 +148,20 @@ class Blockchain:
         if self.is_valid_chain(new_chain) and len(new_chain) > len(self.chain):
             self.chain = new_chain
 
-    def add_transaction(self, transaction):
-        # Add a transaction to the pending transactions list
+    def add_transaction(self, sender, recipient, amount):
+        # Create a new transaction and sign it
+        private_key = self.users.get(sender)
+        if private_key is None:
+            raise ValueError("Invalid sender.")
+
+        transaction = Transaction(sender, recipient, amount, private_key)
+        transaction.sign()
+
+        if not transaction.verify_signature():
+            raise ValueError("Invalid transaction signature.")
+
         self.pending_transactions.append(transaction)
+
 
     def mine_pending_transactions(self, miner_reward):
         # Create a new block with the pending transactions and mine it
@@ -113,17 +184,3 @@ class Blockchain:
                 "hash": block.hash
             })
         return json_chain
-
-#Create blocks and mine them
-
-"""
-block1 = Block("0", time.time(), "Transaction data", 0)
-block1.mine_block(2)
-print(block1)
-
-# Create another block instance with the previous hash set to the hash of the previous block
-
-block2 = Block(block1.hash, time.time(), "More transactions", 0)
-block2.mine_block(3)
-print(block2)
-"""

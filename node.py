@@ -1,11 +1,25 @@
 from flask import Flask, jsonify, request
 import requests
 from block import Block, Blockchain
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
 blockchain = Blockchain()
-known_nodes = []
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
+db = SQLAlchemy(app)
+
+class Node(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    node_address = db.Column(db.String(100), nullable=False, unique=True)
+
+    def __repr__(self):
+        return f"node('{self.node_address}')"
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/blocks', methods=['GET', 'POST'])
 def blocks_route():
@@ -45,12 +59,13 @@ def consensus():
     longest_chain = None
     current_length = len(blockchain)
 
-    other_nodes = known_nodes
+    other_nodes = Node.query.all()
     
     # Iterate through other nodes in the network
     for node in other_nodes:
+        address = node.node_address
         # Make a GET request to the '/blocks' endpoint of each node
-        response = requests.get(f'http://{node}/blocks')
+        response = requests.get(f'http://{address}/blocks')
         if response.status_code == 200:
             # Extract the blockchain from the response
             node_chain_json = response.json()
@@ -85,10 +100,12 @@ def consensus():
 
 @app.route('/register', methods=['POST'])
 def register_node():
-    node_address = request.get_json()['node_address']
+    
+    node_address = request.host
+    new_node = Node(node_address=node_address)
 
-    if node_address not in known_nodes:
-        known_nodes.append(node_address)
+    db.session.add(new_node)
+    db.session.commit()
     
     response = {'message': 'Node registered successfully'}
     return jsonify(response), 201
