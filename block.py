@@ -1,8 +1,13 @@
 import hashlib
-import time
+from datetime import datetime
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+
+def timestamp_str():
+    timestamp = datetime.timestamp(datetime.now())
+    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
 
 class Transaction:
     def __init__(self, sender, recipient, amount, private_key=None):
@@ -12,11 +17,25 @@ class Transaction:
         self.private_key = private_key
         self.signature = None
     
+    def __str__(self):
+        sender_key_str = self.sender.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8')
+
+        recipient_key_str = self.recipient.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8')
+    
+        return f"Transaction(Sender: {sender_key_str}, Recipient: {recipient_key_str}, Amount: {self.amount})"
+
+    
     def sign(self):
         if self.private_key is None:
             raise ValueError("Private key is not set.")
         
-        transaction_data = self.sender + self.recipient + str(self.amount)
+        transaction_data = str(self.sender.public_bytes) + str(self.recipient.public_bytes) + str(self.amount)
         hash_obj = hashlib.sha256(transaction_data.encode()).digest()
         signature = self.private_key.sign(
             hash_obj,
@@ -32,7 +51,7 @@ class Transaction:
         if self.signature is None:
             raise ValueError("Signature is not set.")
         
-        transaction_data = self.sender + self.recipient + str(self.amount)
+        transaction_data = str(self.sender.public_bytes) + str(self.recipient.public_bytes) + str(self.amount)
         hash_obj = hashlib.sha256(transaction_data.encode()).digest()
         try:
             self.sender.verify(
@@ -83,7 +102,8 @@ class Block:
         return self.hash.startswith("0000")
 
     def __str__(self):
-        return f"Block Hash: {self.hash}\nPrevious Hash: {self.previous_hash}\nTimestamp: {self.timestamp}\nTransactions: {self.transactions}\nNonce: {self.nonce}"
+        transactions_str = "\n".join(str(transaction) for transaction in self.transactions)
+        return f"Block Hash: {self.hash}\nPrevious Hash: {self.previous_hash}\nTimestamp: {self.timestamp}\nTransactions: {transactions_str}\nNonce: {self.nonce}"
 
 class Blockchain:
     def __init__(self):
@@ -91,21 +111,23 @@ class Blockchain:
         self.difficulty = 4  # Set the mining difficulty
         self.pending_transactions = []
         self.users = {} 
+
+    genesis_private_key = rsa.generate_private_key(65537, 512)
+    genesis_public_key = genesis_private_key.public_key()
     
     def __len__(self):
         # Return the length of the chain
         return len(self.chain)
 
     def create_genesis_block(self):
-        # Create the genesis block manually or based on your requirements
-        return Block("0", "01/01/2022", "Genesis Block", 0)
+        transaction = Transaction(self.genesis_public_key, self.genesis_public_key, 0)
+        return Block("0", timestamp_str(), [transaction], 0)
     
-
     def generate_key_pair(self):
         # Generate a new RSA key pair for a user
-        key_pair = rsa.generate(2048)
-        public_key = key_pair.public_key()
-        private_key = key_pair.export_key()
+        private_key = rsa.generate_private_key(65537, 512)
+        public_key = private_key.public_key()
+        
         return public_key, private_key
     
     def add_user(self):
@@ -162,15 +184,24 @@ class Blockchain:
 
         self.pending_transactions.append(transaction)
 
-
     def mine_pending_transactions(self, miner_reward):
         # Create a new block with the pending transactions and mine it
-        block = Block(self.get_last_block().hash, time.time(), self.pending_transactions, 0)
+        block = Block(self.get_last_block().hash, timestamp_str(), self.pending_transactions, 0)
         block.mine_block(self.difficulty)
         self.chain.append(block)
 
         # Reset the pending transactions and add the miner reward transaction
-        self.pending_transactions = [Transaction("Mining Reward", miner_reward, "")]
+        self.pending_transactions = [Transaction(self.genesis_public_key, miner_reward, 1)]
+    
+    def get_user_balance(self, user):
+        balance = 0
+        for block in self.chain:
+            for transaction in block.transactions:
+                if transaction.sender == user:
+                    balance -= transaction.amount
+                if transaction.recipient == user:
+                    balance += transaction.amount
+        return balance
 
     def to_json(self):
         # Convert the blockchain to a JSON representation
