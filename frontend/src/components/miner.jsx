@@ -1,16 +1,14 @@
-import '../App.css';
-
 function Miner() {
 
     const mine = () => {
         console.log("Mining...");
     }
     return(
-        <div>
-            <header>
-                <button onClick={(mine)}>Mine block</button>
-            </header>
-        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '20px' }}>
+        <button onClick={mine} >
+          Mine block
+        </button>
+      </div>
     )
 }
 

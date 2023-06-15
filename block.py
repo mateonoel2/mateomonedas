@@ -176,6 +176,10 @@ class Blockchain:
         if private_key is None:
             raise ValueError("Invalid sender.")
 
+        sender_balance = self.get_user_balance(sender)
+        if sender_balance < amount:
+            raise ValueError("Insufficient funds.")
+    
         transaction = Transaction(sender, recipient, amount, private_key)
         transaction.sign()
 

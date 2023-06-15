@@ -3,20 +3,13 @@ import requests
 from block import Block, Blockchain
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-import pickle
+from cryptography.hazmat.primitives import serialization
 
 app = Flask(__name__)
 
 CORS(app)
 
-blockchain = None
-
-try:
-    with open("blockchain/blockchain", "rb") as file:
-        blockchain = pickle.load(file)
-
-except:
-    blockchain = Blockchain()
+blockchain = Blockchain()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
@@ -28,8 +21,32 @@ class Node(db.Model):
     def __repr__(self):
         return f"node('{self.node_address}')"
 
+class User(db.Model):
+    id = db.Column(db.String(500), nullable=False, unique=True, primary_key=True)
+    public_key = db.Column(db.String(500), nullable=False, unique=True)
+
+    def __repr__(self):
+        return f"node('{self.id}')"
+
 with app.app_context():
     db.create_all()
+
+@app.route('/public_key/<userID>', methods=['GET'])
+def get_public_key(userID):    
+    key = User.query.get_or_404(userID)
+    key = key.public_key
+    return key
+
+
+@app.route('/create_account/<userID>', methods=['POST'])
+def create_account(userID):
+    user_key = blockchain.add_user()
+    user_key_string = user_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+    new_user = User(id=userID, public_key=user_key_string)
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return "Account created successfully"
 
 @app.route('/blocks', methods=['GET', 'POST'])
 def blocks_route():

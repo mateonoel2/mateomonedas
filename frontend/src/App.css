@@ -1,3 +1,25 @@
+body{
+  background-color: #282c34;
+  color: white;
+}
+
+.a {
+  background-color: #525458;
+  border-radius: 4px;
+  padding: 10px 20px;
+}
+
+.b {
+  color: #525458;
+  background-color: #525458;
+  border-radius: 4px;
+  padding: 10px 20px;
+}
+
+.b:hover {
+  color: white;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -10,8 +32,8 @@
 }
 
 header {
-  text-align: center;
   background-color: #282c34;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,4 +49,17 @@ header {
   to {
     transform: rotate(360deg);
   }
+}
+
+button {
+  background-color: #343e5a;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #3c528f;
 }
