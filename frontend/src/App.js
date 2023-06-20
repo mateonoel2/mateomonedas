@@ -7,17 +7,19 @@ import Account from './components/account';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState({});
+  const [credential, setCredential] = useState();
 
-  const handleLogin = (user) => {
+  const handleLogin = (user, credential) => {
     setIsLoggedIn(true);
     setUser(user);
+    setCredential(credential)
   };
 
   return (
     <div className="App">
       {isLoggedIn ? (
         <>
-          <Account user={user} />
+          <Account user={user} credential={credential} />
         </>
       ) : (
         <Login onLogin={handleLogin} />

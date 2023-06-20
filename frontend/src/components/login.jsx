@@ -15,7 +15,9 @@ function Login(props) {
 
   const responseMessage = (response) => {
     const user = parseJwt(response.credential);
-    props.onLogin(user);
+    const credential = response.credential;
+    console.log(response.credential);
+    props.onLogin(user, credential);
   };
 
   const errorMessage = (error) => {

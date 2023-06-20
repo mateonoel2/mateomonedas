@@ -5,17 +5,20 @@ import Transaction from './transaction';
 import HandleAccount from './HandleAccount';
 import axiosInstance from './api.js';
 
-function Account({ user }) {
+function Account({ user,  credential }) {
   const [public_key, setPublicKey] = useState();
   const [balance, setBalance] = useState();
-  const [hasAccount, setAccount] = useState(true);
+  const [hasAccount, setAccount] = useState(false);
 
   useEffect(() => {
+
     const fetchPublicKey = async () => {
       try {
-        const response = await axiosInstance.get(`/public_key/${user.sub}`);
+        var data = {"credential": credential};
+        const response = await axiosInstance.post(`/public_key/${user.sub}`, data);
         const publicKey = await response.data;
         setPublicKey(publicKey);
+        setAccount(true);
       } catch (error) {
         console.error('Error fetching public key:', error);
         setPublicKey("No public key found");
@@ -31,13 +34,12 @@ function Account({ user }) {
       } catch (error) {
         console.error('Error fetching balance:', error);
         setBalance("No balance found");
-        setAccount(false);
       }
     };
     
     fetchPublicKey();
     fetchBalance();
-  }, [user.sub]);
+  }, [user.sub, credential]);
 
   const handleCopyPublicKey = () => {
     navigator.clipboard.writeText(public_key);

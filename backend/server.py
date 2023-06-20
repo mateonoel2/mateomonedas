@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 from pyparsing import wraps
 import requests
 from block import Block, Blockchain
@@ -6,12 +6,14 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+import base64
+import json
 
 app = Flask(__name__)
 
 CORS(app)
- 
-API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s' 
+
+API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
 
 def validate_api_key(func):
     @wraps(func)
@@ -23,11 +25,16 @@ def validate_api_key(func):
             return jsonify({'error': 'Unauthorized'}), 401
     return wrapper
 
+
+def parse_jwt(token):
+    base64_payload = token.split('.')[1]
+    base64_payload += '=' * (4 - (len(base64_payload) % 4))  # Add padding if necessary
+    decoded_payload = base64.urlsafe_b64decode(base64_payload).decode('utf-8')
+    return json.loads(decoded_payload)
+
 blockchain = Blockchain()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-
-users = {}
 
 db = SQLAlchemy(app)
 
@@ -40,15 +47,23 @@ class Node(db.Model):
 with app.app_context():
     db.create_all()
 
-@app.route('/public_key/<userID>', methods=['GET'])
+users = {}
+
+@app.route('/public_key/<userID>', methods=['POST'])
 @validate_api_key
 def get_public_key(userID): 
+    token = request.get_json().get('credential')
+    payload = parse_jwt(token)
+    if payload['sub'] != userID:
+        return "Invalid token", 400
     try:
         public_key = users[userID]
         key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
         return key
     except:
         return "No user found", 404
+    
+    
     
 @app.route('/transaction/<userID>', methods=['POST'])
 @validate_api_key
@@ -194,4 +209,4 @@ def register_node():
     return jsonify(response), 201
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5010)
+    app.run(port=8080)
