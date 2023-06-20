@@ -1,7 +1,21 @@
 import React, { useState } from 'react';
 import '../style/transaction.css';
+import axiosInstance from './api.js';
 
-function Transaction() {
+function makeTransaction(account, amount, user) {
+  var data = { "account": account, "amount": amount };
+
+  axiosInstance.post(`/transaction/${user.sub}`, data)
+    .then(response => {
+      console.log(response.data);
+      alert(response.data);
+    })
+    .catch(error => {
+      console.error('Error making transaction:', error);
+    });
+}
+
+function Transaction({user}) {
   const [account, setAccount] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -17,6 +31,9 @@ function Transaction() {
     event.preventDefault();
     // Send transaction logic here
     console.log(`Sending transaction to account ${account} with amount ${amount}`);
+
+    makeTransaction(account, amount, user);
+
     // Reset form
     setAccount('');
     setAmount('');

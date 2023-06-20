@@ -5,14 +5,16 @@ blockchain = Blockchain()
 user1 = blockchain.add_user()
 user2 = blockchain.add_user()
 
-
-
-
-blockchain.add_transaction(user1, user2, 10)
-blockchain.add_transaction(user2, user1, 5)
-
 blockchain.mine_pending_transactions(user1)
 blockchain.mine_pending_transactions(user1)
+blockchain.mine_pending_transactions(user1)
+blockchain.mine_pending_transactions(user1)
+blockchain.mine_pending_transactions(user1)
+
+
+blockchain.add_transaction(user1, user2, 4)
+blockchain.mine_pending_transactions(user1)
+
 
 for block in blockchain.chain:
     print(block)

@@ -3,29 +3,40 @@ import '../style/account.css';
 import Miner from './miner';
 import Transaction from './transaction';
 import HandleAccount from './HandleAccount';
+import axiosInstance from './api.js';
 
 function Account({ user }) {
-  var funds = 0;
   const [public_key, setPublicKey] = useState();
-  const [hasAccount, setAccount] = useState(false);
+  const [balance, setBalance] = useState();
+  const [hasAccount, setAccount] = useState(true);
 
   useEffect(() => {
     const fetchPublicKey = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:5010/public_key/${user.sub}`);
-        if (response.status === 404){
-          setPublicKey("No public key found");
-        }
-        else{
-          const publicKey = await response.text();
-          setPublicKey(publicKey);
-        }
+        const response = await axiosInstance.get(`/public_key/${user.sub}`);
+        const publicKey = await response.data;
+        setPublicKey(publicKey);
       } catch (error) {
         console.error('Error fetching public key:', error);
+        setPublicKey("No public key found");
+        setAccount(false);
+      }
+    };
+
+    const fetchBalance = async () => {
+      try {
+        const response = await axiosInstance.get(`/balance/${user.sub}`);
+        const balance_resp = await response.data;
+        setBalance(balance_resp);
+      } catch (error) {
+        console.error('Error fetching balance:', error);
+        setBalance("No balance found");
+        setAccount(false);
       }
     };
     
     fetchPublicKey();
+    fetchBalance();
   }, [user.sub]);
 
   const handleCopyPublicKey = () => {
@@ -45,31 +56,31 @@ function Account({ user }) {
       <table style={{margin:'20px'}}>
       <tbody>
           <tr>
-            <td>Email</td>
+            <td>email</td>
             <td className='a'>{user.email}</td>
           </tr>
           <tr>
-            <td>Public key </td>
+            <td>public-key </td>
             <td className='b'> 
-              {public_key}
+              <pre>{public_key}</pre>
             </td>
             <td>
               <button onClick={handleCopyPublicKey} className="copy-button">
-                Copy key
+                copy
               </button>
             </td>
           </tr>
           <tr>
-            <td>Balance </td>
-            <td className='a'>{funds}</td>
+            <td>balance </td>
+            <td className='a'>{balance}</td>
           </tr>
         </tbody>
       </table>  
       <Transaction user={user} />
-      <Miner />
+      <Miner user = {user}/>
     </div>
     ) : (
-      <HandleAccount user={user} setAccount={setAccount} />
+      <HandleAccount user={user} />
     )}
     </div>
   );

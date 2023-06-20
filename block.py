@@ -1,8 +1,8 @@
 import hashlib
 from datetime import datetime
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
+
 
 def timestamp_str():
     timestamp = datetime.timestamp(datetime.now())
@@ -199,11 +199,12 @@ class Blockchain:
     
     def get_user_balance(self, user):
         balance = 0
+        userkey = user.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
         for block in self.chain:
             for transaction in block.transactions:
-                if transaction.sender == user:
+                if transaction.sender.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8') == userkey:
                     balance -= transaction.amount
-                if transaction.recipient == user:
+                if transaction.recipient.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8') == userkey:
                     balance += transaction.amount
         return balance
 
@@ -211,10 +212,12 @@ class Blockchain:
         # Convert the blockchain to a JSON representation
         json_chain = []
         for block in self.chain:
+            transactions_str = "\n".join(str(transaction) for transaction in block.transactions)
+
             json_chain.append({
                 "previous_hash": block.previous_hash,
-                "timestamp": block.timestamp,
-                "transactions": block.transactions,
+                "timestamp": block.timestamp,    
+                "transactions": transactions_str,
                 "nonce": block.nonce,
                 "hash": block.hash
             })

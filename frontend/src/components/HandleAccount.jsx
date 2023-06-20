@@ -1,10 +1,12 @@
-const HandleAccount = ({ user, setAccount }) => {
+import axiosInstance from "./api";
+
+const HandleAccount = ({ user }) => {  
   const handleClick = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:5010/create_account/${user.sub}`,{method: 'POST'});
-      const message = await response.text();
+      const response = await axiosInstance.post(`/create_account/${user.sub}`);
+      const message = await response.data;
       if (message === "Account created successfully") {
-        setAccount(true);
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error generating public key', error);

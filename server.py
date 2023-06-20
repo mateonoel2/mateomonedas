@@ -1,17 +1,33 @@
 from flask import Flask, jsonify, request
+from pyparsing import wraps
 import requests
 from block import Block, Blockchain
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
 app = Flask(__name__)
 
 CORS(app)
+ 
+API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s' 
+
+def validate_api_key(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        api_key = request.headers.get('Authorization')
+        if api_key == f'Bearer {API_KEY}':
+            return func(*args, **kwargs)
+        else:
+            return jsonify({'error': 'Unauthorized'}), 401
+    return wrapper
 
 blockchain = Blockchain()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
+users = {}
 
 db = SQLAlchemy(app)
 
@@ -21,31 +37,69 @@ class Node(db.Model):
     def __repr__(self):
         return f"node('{self.node_address}')"
 
-class User(db.Model):
-    id = db.Column(db.String(500), nullable=False, unique=True, primary_key=True)
-    public_key = db.Column(db.String(500), nullable=False, unique=True)
-
-    def __repr__(self):
-        return f"node('{self.id}')"
-
 with app.app_context():
     db.create_all()
 
 @app.route('/public_key/<userID>', methods=['GET'])
-def get_public_key(userID):    
-    key = User.query.get_or_404(userID)
-    key = key.public_key
-    return key
+@validate_api_key
+def get_public_key(userID): 
+    try:
+        public_key = users[userID]
+        key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+        return key
+    except:
+        return "No user found", 404
+    
+@app.route('/transaction/<userID>', methods=['POST'])
+@validate_api_key
+def transaction(userID):
+    data = request.get_json()
+    sender_key = users[userID]
+    sender_str = sender_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+    print(sender_str)
 
+    recipient = data.get('account')
+    recipient = recipient.replace("-----BEGIN PUBLIC KEY----- ", "")
+    recipient = recipient.replace(" -----END PUBLIC KEY-----", "")
+    recipient = recipient.strip()
+    recipient = recipient.replace(" ", "\n")
+    recipient = "-----BEGIN PUBLIC KEY-----\n" + recipient +  "\n-----END PUBLIC KEY-----\n"
+
+    print(recipient)
+
+    key_bytes = recipient.encode('utf-8')
+    
+
+    recipient_key = serialization.load_pem_public_key(key_bytes, backend=default_backend())
+    amount = data.get('amount')
+
+    if (sender_str == recipient):
+        return "Cannot send to yourself", 400
+
+    blockchain.add_transaction(sender_key, recipient_key, int(amount))
+    return "Transaction added successfully"
+
+@app.route('/balance/<userID>', methods=['GET'])
+@validate_api_key
+def get_balance(userID):
+    try:
+        key = users[userID]
+        balance = blockchain.get_user_balance(key)
+        return str(balance)
+    except:
+        return "No user found", 404
+    
+@app.route('/mine/<userID>', methods=['GET'])
+@validate_api_key
+def mine(userID):
+    blockchain.mine_pending_transactions(users[userID])
+    return "Block mined successfully"
 
 @app.route('/create_account/<userID>', methods=['POST'])
+@validate_api_key
 def create_account(userID):
     user_key = blockchain.add_user()
-    user_key_string = user_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
-    new_user = User(id=userID, public_key=user_key_string)
-    db.session.add(new_user)
-    db.session.commit()
-    
+    users[userID] = user_key    
     return "Account created successfully"
 
 @app.route('/blocks', methods=['GET', 'POST'])
@@ -81,6 +135,7 @@ def blocks_route():
 
 
 @app.route('/consensus', methods=['GET'])
+@validate_api_key
 def consensus():
     # Logic to handle consensus among nodes
     longest_chain = None
@@ -126,6 +181,7 @@ def consensus():
     return jsonify(response), 200
 
 @app.route('/register', methods=['POST'])
+@validate_api_key
 def register_node():
     
     node_address = request.host
