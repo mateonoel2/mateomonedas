@@ -25,7 +25,6 @@ def validate_api_key(func):
             return jsonify({'error': 'Unauthorized'}), 401
     return wrapper
 
-
 def parse_jwt(token):
     base64_payload = token.split('.')[1]
     base64_payload += '=' * (4 - (len(base64_payload) % 4))  # Add padding if necessary
@@ -49,7 +48,7 @@ with app.app_context():
 
 users = {}
 
-@app.route('/public_key/<userID>', methods=['POST'])
+@app.route('/api/public_key/<userID>', methods=['POST'])
 @validate_api_key
 def get_public_key(userID): 
     token = request.get_json().get('credential')
@@ -65,7 +64,7 @@ def get_public_key(userID):
     
     
     
-@app.route('/transaction/<userID>', methods=['POST'])
+@app.route('/api/transaction/<userID>', methods=['POST'])
 @validate_api_key
 def transaction(userID):
     data = request.get_json()
@@ -94,7 +93,7 @@ def transaction(userID):
     blockchain.add_transaction(sender_key, recipient_key, int(amount))
     return "Transaction added successfully"
 
-@app.route('/balance/<userID>', methods=['GET'])
+@app.route('/api/balance/<userID>', methods=['GET'])
 @validate_api_key
 def get_balance(userID):
     try:
@@ -104,20 +103,20 @@ def get_balance(userID):
     except:
         return "No user found", 404
     
-@app.route('/mine/<userID>', methods=['GET'])
+@app.route('/api/mine/<userID>', methods=['GET'])
 @validate_api_key
 def mine(userID):
     blockchain.mine_pending_transactions(users[userID])
     return "Block mined successfully"
 
-@app.route('/create_account/<userID>', methods=['POST'])
+@app.route('/api/create_account/<userID>', methods=['POST'])
 @validate_api_key
 def create_account(userID):
     user_key = blockchain.add_user()
     users[userID] = user_key    
     return "Account created successfully"
 
-@app.route('/blocks', methods=['GET', 'POST'])
+@app.route('/api/blocks', methods=['GET', 'POST'])
 def blocks_route():
     if request.method == 'GET':
         # Logic to return the blockchain as JSON
@@ -149,7 +148,7 @@ def blocks_route():
             return jsonify(response), 400
 
 
-@app.route('/consensus', methods=['GET'])
+@app.route('/api/consensus', methods=['GET'])
 @validate_api_key
 def consensus():
     # Logic to handle consensus among nodes
@@ -195,7 +194,7 @@ def consensus():
 
     return jsonify(response), 200
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 @validate_api_key
 def register_node():
     

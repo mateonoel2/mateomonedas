@@ -3,3 +3,7 @@ instance/database.db
 frontend/src/components/config.js
 **/venv/**
 **/__pycache__/**
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

@@ -1,4 +1,5 @@
 import axiosInstance from "./api";
+import React from "react";
 
 const HandleAccount = ({ user }) => {  
   const handleClick = async () => {

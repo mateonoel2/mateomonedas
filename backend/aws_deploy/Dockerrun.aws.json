@@ -1,0 +1,13 @@
+{
+    "AWSEBDockerrunVersion": "1",
+    "Image": {
+      "Name": "641580831416.dkr.ecr.us-east-2.amazonaws.com/mateomonedas-backend",
+      "Update": "true"
+    },
+    "Ports": [
+      {
+        "ContainerPort": 8080,
+        "HostPort": 8080
+      }
+    ]
+  }

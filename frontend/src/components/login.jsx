@@ -1,5 +1,6 @@
 import logo from '../logo.svg';
 import { GoogleLogin } from '@react-oauth/google';
+import React from "react";
 
 function parseJwt (token) {
   var base64Url = token.split('.')[1];
