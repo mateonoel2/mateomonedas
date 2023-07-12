@@ -44,7 +44,7 @@ function Transaction({user}) {
       <h2>Transaction</h2>
       <form className="transaction-form" onSubmit={handleSubmit}>
         <label>
-          Enter Account:
+          Enter target account public-key:
           <input type="text" value={account} onChange={handleAccountChange} />
         </label>
         <br />

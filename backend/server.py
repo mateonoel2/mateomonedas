@@ -15,6 +15,8 @@ CORS(app)
 
 API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
 def validate_api_key(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -32,8 +34,6 @@ def parse_jwt(token):
     return json.loads(decoded_payload)
 
 blockchain = Blockchain()
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
 db = SQLAlchemy(app)
 
