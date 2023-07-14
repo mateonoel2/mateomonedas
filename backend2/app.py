@@ -1,21 +1,15 @@
-from flask import Flask, jsonify, request, session
-from pyparsing import wraps
-import requests
-from block import Block, Blockchain
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
+from functools import wraps
 import base64
 import json
-
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from block import Block, Blockchain
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 app = Flask(__name__)
-
 CORS(app)
 
 API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
 def validate_api_key(func):
     @wraps(func)
@@ -29,22 +23,15 @@ def validate_api_key(func):
 
 def parse_jwt(token):
     base64_payload = token.split('.')[1]
-    base64_payload += '=' * (4 - (len(base64_payload) % 4))  # Add padding if necessary
+    base64_payload += '=' * (4 - (len(base64_payload) % 4))  
     decoded_payload = base64.urlsafe_b64decode(base64_payload).decode('utf-8')
     return json.loads(decoded_payload)
 
+@app.route('/')
+def home():
+    return "ok"
+
 blockchain = Blockchain()
-
-db = SQLAlchemy(app)
-
-class Node(db.Model):
-    node_address = db.Column(db.String(100), nullable=False, unique=True, primary_key=True)
-
-    def __repr__(self):
-        return f"node('{self.node_address}')"
-
-with app.app_context():
-    db.create_all()
 
 users = {}
 
@@ -62,8 +49,7 @@ def get_public_key(userID):
     except:
         return "No user found", 404
     
-    
-    
+
 @app.route('/api/transaction/<userID>', methods=['POST'])
 @validate_api_key
 def transaction(userID):
@@ -146,66 +132,6 @@ def blocks_route():
         else:
             response = {'message': 'Invalid block. Rejected.'}
             return jsonify(response), 400
-
-
-@app.route('/api/consensus', methods=['GET'])
-@validate_api_key
-def consensus():
-    # Logic to handle consensus among nodes
-    longest_chain = None
-    current_length = len(blockchain)
-
-    other_nodes = Node.query.all()
-    
-    # Iterate through other nodes in the network
-    for node in other_nodes:
-        address = node.node_address
-        # Make a GET request to the '/blocks' endpoint of each node
-        response = requests.get(f'http://{address}/blocks')
-        if response.status_code == 200:
-            # Extract the blockchain from the response
-            node_chain_json = response.json()
-
-            node_chain = []
-            for block_data in node_chain_json:
-                block = Block(
-                    block_data['previous_hash'],
-                    block_data['timestamp'],
-                    block_data['transactions'],
-                    block_data['nonce']
-                )
-                block.hash = block_data['hash']
-                node_chain.append(block)
-                
-            node_length = len(node_chain)
-            print(node_length)
-
-            # Check if the node's blockchain is longer and valid
-            if node_length > current_length and blockchain.is_valid_chain(node_chain):
-                current_length = node_length
-                longest_chain = node_chain
-
-    if longest_chain:
-        # Replace the current blockchain with the longest valid chain
-        blockchain.replace_chain(longest_chain)
-        response = {'message': 'Blockchain replaced with the longest valid chain'}
-    else:
-        response = {'message': 'Current blockchain is the longest valid chain'}
-
-    return jsonify(response), 200
-
-@app.route('/api/register', methods=['POST'])
-@validate_api_key
-def register_node():
-    
-    node_address = request.host
-    new_node = Node(node_address=node_address)
-
-    db.session.add(new_node)
-    db.session.commit()
-    
-    response = {'message': 'Node registered successfully'}
-    return jsonify(response), 201
 
 if __name__ == '__main__':
     app.run(port=8080)
