@@ -1,10 +1,7 @@
 from functools import wraps
-import base64
-import json
-from flask import Flask, jsonify, request, redirect, session
+from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 from block import Block, Blockchain
-from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 import html
@@ -16,21 +13,6 @@ CORS(app)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
 app.secret_key = os.getenv('API_KEY')
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    user_sub = db.Column(db.String(100), nullable=False, unique=True, primary_key=True)
-    public_key = db.Column(db.String(1000), nullable=False)
-    private_key = db.Column(db.String(1000), nullable=False)
-
-    def __repr__(self):
-        return f"node('{self.node_address}')"
-    
-with app.app_context():
-    db.create_all()
 
 def login_required(f):
     @wraps(f)

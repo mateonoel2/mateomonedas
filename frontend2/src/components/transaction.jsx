@@ -11,6 +11,7 @@ function makeTransaction(account, amount, user) {
       alert(response.data);
     })
     .catch(error => {
+      alert("You do not have enough funds or you tried to send mateomonedas to an invalid account")
       console.error('Error making transaction:', error);
     });
 }

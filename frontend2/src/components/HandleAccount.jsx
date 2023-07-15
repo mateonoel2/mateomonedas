@@ -17,9 +17,9 @@ const HandleAccount = ({ user }) => {
   return (
     <div style={{ margin: '20px' }}>
         <header>
-        <h1 className="account-message">
-            You do not have an account, create account to continue
-        </h1>
+        <h3 className="account-message">
+            You do not have an account, create an account to continue
+        </h3>
         <button onClick={handleClick} className="account-button">
             Create Account
         </button>

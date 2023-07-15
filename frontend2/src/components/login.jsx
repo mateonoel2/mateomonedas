@@ -43,6 +43,7 @@ function Login(props) {
       <header className="Login-header">
         <h2>MateoMonedas</h2>
         <br />
+        <h3>welcome to mateomonedas, your crypto wallet for mateomonedas!</h3>
         <br />
         <GoogleLogin onSuccess={responseMessage} onError={errorMessage} />
         <img src={logo} className="App-logo" alt="logo" />

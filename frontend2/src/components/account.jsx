@@ -50,7 +50,7 @@ function Account({ user,  credential }) {
     {hasAccount ? (
     <div>
       <header>
-        <h2>MateoMonedas Account Profile</h2>
+        <h2>Your MateoMonedas Wallet</h2>
         <br />
         <br />
       </header>
@@ -74,7 +74,7 @@ function Account({ user,  credential }) {
           </tr>
           <tr>
             <td>balance </td>
-            <td className='a'>{balance}</td>
+            <td className='a'>{`${balance} mm`}</td>
           </tr>
         </tbody>
       </table>  
