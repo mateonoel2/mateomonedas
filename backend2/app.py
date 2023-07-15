@@ -7,13 +7,14 @@ from block import Block, Blockchain
 from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+import os
 
 
 app = Flask(__name__)
 CORS(app)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
-app.secret_key = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
+app.secret_key = os.getenv('API_KEY')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
