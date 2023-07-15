@@ -10,7 +10,7 @@ function Miner({ user }) {
       .then(response => response.data)
       .then(text => 
         {console.log(text);
-        alert(`${text}, refresh the page to recive your 1 mateomoneada`);
+        alert(`${text}, reload the page to see if someone has given you mateomoneadas`);
       })
       .catch(error => console.error(error)); 
   };
@@ -21,7 +21,7 @@ function Miner({ user }) {
       <button onClick={mine}>Mine block</button>
     </div>
     <div>
-      <h3>If you want to help us complete all pending transactions, mine a block and receive your 1 mateomoneda as a reward!</h3>
+      <h3>If you want to help us complete all pending transactions, mine a block and obtain 1 mateomoneda as a reward!</h3>
     </div>
     </>
   );
