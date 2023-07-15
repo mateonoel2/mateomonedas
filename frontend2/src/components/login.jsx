@@ -18,7 +18,6 @@ function Login(props) {
   const responseMessage = async (response) => {
     const user = parseJwt(response.credential);
     const credential = response.credential;
-    console.log(response.credential);
 
     try {
       const res = await axiosInstance.post(`/login/${user.sub}`);

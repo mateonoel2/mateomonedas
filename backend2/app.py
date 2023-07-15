@@ -7,6 +7,7 @@ from block import Block, Blockchain
 from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+import html
 import os
 
 
@@ -55,13 +56,14 @@ def login(userID):
 
 @app.route('/api/public_key/<userID>', methods=['POST'])
 @login_required
-def get_public_key(userID): 
-        try:
-            public_key = users[userID]
-            key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
-            return key
-        except:
-            return "No user found", 404
+def get_public_key(userID):
+    try:
+        public_key = users[userID]
+        key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+        sanitized_key = html.escape(key)
+        return sanitized_key
+    except:
+        return "No user found", 404
     
 
 @app.route('/api/transaction/<userID>', methods=['POST'])
@@ -148,4 +150,4 @@ def blocks_route():
             return jsonify(response), 400
 
 if __name__ == '__main__':
-    app.run(port=8080, debug=True)
+    app.run(port=8080)

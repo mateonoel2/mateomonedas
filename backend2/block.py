@@ -112,7 +112,7 @@ class Blockchain:
         self.pending_transactions = []
         self.users = {} 
 
-    genesis_private_key = rsa.generate_private_key(65537, 512)
+    genesis_private_key = rsa.generate_private_key(65537, 2048)
     genesis_public_key = genesis_private_key.public_key()
     
     def __len__(self):
@@ -125,7 +125,7 @@ class Blockchain:
     
     def generate_key_pair(self):
         # Generate a new RSA key pair for a user
-        private_key = rsa.generate_private_key(65537, 512)
+        private_key = rsa.generate_private_key(65537, 2048)
         public_key = private_key.public_key()
         
         return public_key, private_key
