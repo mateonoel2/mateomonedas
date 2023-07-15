@@ -80,7 +80,7 @@ El repositorio GitHub de esta aplicación se encuentra en: https://github.com/ma
 +---------------------+
 |                     |
 |      AWS RDS        |
-|  (Database storage) |
+|  (Database storage) | 
 |                     |
 +---------------------+
 ```

@@ -1,106 +1,119 @@
 from functools import wraps
 import base64
 import json
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, session
 from flask_cors import CORS
 from block import Block, Blockchain
+from flask_sqlalchemy import SQLAlchemy
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+
+
 app = Flask(__name__)
 CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
-API_KEY = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
+app.secret_key = 'qPzT2B7AhloXs9BEgmQcoaBuMpabQO6s'
 
-def validate_api_key(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    user_sub = db.Column(db.String(100), nullable=False, unique=True, primary_key=True)
+    public_key = db.Column(db.String(1000), nullable=False)
+    private_key = db.Column(db.String(1000), nullable=False)
+
+    def __repr__(self):
+        return f"node('{self.node_address}')"
+    
+with app.app_context():
+    db.create_all()
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
         api_key = request.headers.get('Authorization')
-        if api_key == f'Bearer {API_KEY}':
-            return func(*args, **kwargs)
-        else:
-            return jsonify({'error': 'Unauthorized'}), 401
-    return wrapper
-
-def parse_jwt(token):
-    base64_payload = token.split('.')[1]
-    base64_payload += '=' * (4 - (len(base64_payload) % 4))  
-    decoded_payload = base64.urlsafe_b64decode(base64_payload).decode('utf-8')
-    return json.loads(decoded_payload)
-
-@app.route('/')
-def home():
-    return "ok"
+        if 'user' not in session and api_key != f'Bearer {app.secret_key}':
+            return 'Unauthorized', 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 blockchain = Blockchain()
 
 users = {}
 
+@app.route('/api/login/<userID>', methods=['POST'])
+def login(userID):
+    user = userID
+    if user:
+        session['user'] = user
+        return 'Login successful'
+    return 'Invalid username', 401
+
+
 @app.route('/api/public_key/<userID>', methods=['POST'])
-@validate_api_key
+@login_required
 def get_public_key(userID): 
-    token = request.get_json().get('credential')
-    payload = parse_jwt(token)
-    if payload['sub'] != userID:
-        return "Invalid token", 400
-    try:
-        public_key = users[userID]
-        key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
-        return key
-    except:
-        return "No user found", 404
+        try:
+            public_key = users[userID]
+            key = public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+            return key
+        except:
+            return "No user found", 404
     
 
 @app.route('/api/transaction/<userID>', methods=['POST'])
-@validate_api_key
+@login_required
 def transaction(userID):
-    data = request.get_json()
-    sender_key = users[userID]
-    sender_str = sender_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
-    print(sender_str)
+        data = request.get_json()
+        sender_key = users[userID]
+        sender_str = sender_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+        print(sender_str)
 
-    recipient = data.get('account')
-    recipient = recipient.replace("-----BEGIN PUBLIC KEY----- ", "")
-    recipient = recipient.replace(" -----END PUBLIC KEY-----", "")
-    recipient = recipient.strip()
-    recipient = recipient.replace(" ", "\n")
-    recipient = "-----BEGIN PUBLIC KEY-----\n" + recipient +  "\n-----END PUBLIC KEY-----\n"
+        recipient = data.get('account')
+        recipient = recipient.replace("-----BEGIN PUBLIC KEY----- ", "")
+        recipient = recipient.replace(" -----END PUBLIC KEY-----", "")
+        recipient = recipient.strip()
+        recipient = recipient.replace(" ", "\n")
+        recipient = "-----BEGIN PUBLIC KEY-----\n" + recipient +  "\n-----END PUBLIC KEY-----\n"
 
-    print(recipient)
+        print(recipient)
 
-    key_bytes = recipient.encode('utf-8')
-    
+        key_bytes = recipient.encode('utf-8')
+        
 
-    recipient_key = serialization.load_pem_public_key(key_bytes, backend=default_backend())
-    amount = data.get('amount')
+        recipient_key = serialization.load_pem_public_key(key_bytes, backend=default_backend())
+        amount = data.get('amount')
 
-    if (sender_str == recipient):
-        return "Cannot send to yourself", 400
+        if (sender_str == recipient):
+            return "Cannot send to yourself", 400
 
-    blockchain.add_transaction(sender_key, recipient_key, int(amount))
-    return "Transaction added successfully"
+        blockchain.add_transaction(sender_key, recipient_key, int(amount))
+        return "Transaction added successfully"
 
 @app.route('/api/balance/<userID>', methods=['GET'])
-@validate_api_key
+@login_required
 def get_balance(userID):
-    try:
-        key = users[userID]
-        balance = blockchain.get_user_balance(key)
-        return str(balance)
-    except:
-        return "No user found", 404
+        try:
+            key = users[userID]
+            balance = blockchain.get_user_balance(key)
+            return str(balance)
+        except:
+            return "No user found", 404
     
 @app.route('/api/mine/<userID>', methods=['GET'])
-@validate_api_key
+@login_required
 def mine(userID):
-    blockchain.mine_pending_transactions(users[userID])
-    return "Block mined successfully"
+        blockchain.mine_pending_transactions(users[userID])
+        return "Block mined successfully"
 
 @app.route('/api/create_account/<userID>', methods=['POST'])
-@validate_api_key
+@login_required
 def create_account(userID):
-    user_key = blockchain.add_user()
-    users[userID] = user_key    
-    return "Account created successfully"
+        user_key = blockchain.add_user()
+        users[userID] = user_key    
+        return "Account created successfully"
 
 @app.route('/api/blocks', methods=['GET', 'POST'])
 def blocks_route():
@@ -134,4 +147,4 @@ def blocks_route():
             return jsonify(response), 400
 
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(port=8080, debug=True)
